@@ -25,7 +25,7 @@ namespace bustub {
   ((BUSTUB_PAGE_SIZE - INTERNAL_PAGE_HEADER_SIZE) / ((int)(sizeof(KeyType) + sizeof(ValueType))))  // NOLINT
 
 /**
- * Store `n` child pointers (page_id) and `n - 1` indexed keys within internal page.
+ * Store `n` indexed keys and `n + 1` child pointers (page_id) within internal page.
  * Pointer PAGE_ID(i) points to a subtree in which all keys K satisfy:
  * K(i) <= K < K(i+1).
  * NOTE: Since the number of keys does not equal to number of child pointers,
@@ -60,7 +60,44 @@ class BPlusTreeInternalPage : public BPlusTreePage {
    * @param value The value to search for
    * @return The index that corresponds to the specified value
    */
-  auto ValueIndex(const ValueType &value) const -> int;
+  auto ValueIndex(const ValueType &value) const -> int {
+    for (int i = 0; i < GetSize(); i++) {
+      if (page_id_array_[i] == value) {
+        return i;
+      }
+    }
+    return -1;
+  }
+  void SetValueAt(int index, const ValueType &value) { page_id_array_[index] = value; }
+  auto Lookup(const KeyType &key, const KeyComparator &comparator) const -> int {
+    int low = 1;
+    int high = GetSize();
+    while (low < high) {
+      int mid = low + (high - low) / 2;
+      if (comparator(key_array_[mid], key) <= 0) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    return low - 1;
+  }
+  void InsertAt(int index, const KeyType &key, const ValueType &value) {
+    for (int i = GetSize(); i > index; i--) {
+      key_array_[i] = key_array_[i - 1];
+      page_id_array_[i] = page_id_array_[i - 1];
+    }
+    key_array_[index] = key;
+    page_id_array_[index] = value;
+    ChangeSizeBy(1);
+  }
+  void RemoveAt(int index) {
+    for (int i = index; i + 1 < GetSize(); i++) {
+      key_array_[i] = key_array_[i + 1];
+      page_id_array_[i] = page_id_array_[i + 1];
+    }
+    ChangeSizeBy(-1);
+  }
 
   auto ValueAt(int index) const -> ValueType;
 
@@ -94,7 +131,7 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   // Array members for page data.
   KeyType key_array_[INTERNAL_PAGE_SLOT_CNT];
   ValueType page_id_array_[INTERNAL_PAGE_SLOT_CNT];
-  // Feel free to add more fields and helper functions below if needed
+  // (Spring 2025) Feel free to add more fields and helper functions below if needed
 };
 
 }  // namespace bustub

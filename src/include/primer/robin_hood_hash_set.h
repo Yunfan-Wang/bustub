@@ -12,13 +12,18 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <mutex>  // NOLINT
+#include <optional>
+#include <shared_mutex>
+#include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "common/util/hash_util.h"
 
@@ -88,6 +93,38 @@ class RobinHoodHashSet {
  private:
   // TODO(student): Define the bucket representation, synchronization
   // primitives, and metadata needed by your implementation.
+  enum class BucketState : uint8_t {
+    EMPTY,
+    OCCUPIED,
+    TOMBSTONE,
+  };
+
+  struct Bucket {
+    BucketState state_{BucketState::EMPTY};
+    std::optional<KeyType> key_{};
+    mutable std::mutex latch_;
+  };
+
+  /** Home bucket for key. Caller must ensure capacity != 0. */
+  auto HomeBucket(const KeyType &key) const -> size_t { return hasher_(key) % buckets_.size(); }
+
+  /** Circular distance from a key's home bucket to its current bucket. */
+  auto ProbeDistance(const KeyType &key, size_t bucket) const -> size_t {
+    const size_t home = HomeBucket(key);
+    return (bucket + buckets_.size() - home) % buckets_.size();
+  }
+
+  auto KeyLatchIndex(const KeyType &key) const -> size_t { return hasher_(key) % K_NUM_KEY_LATCHES; }
+
+  std::vector<Bucket> buckets_;
+  std::atomic<size_t> size_{0};
+
+  Hash hasher_;
+  KeyEqual key_equal_;
+
+  static constexpr size_t K_NUM_KEY_LATCHES = 128;
+  mutable std::array<std::mutex, K_NUM_KEY_LATCHES> key_latches_;
+  mutable std::shared_mutex latch_;
 };
 
 }  // namespace bustub

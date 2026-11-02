@@ -79,7 +79,8 @@ class FrameHeader {
   std::atomic<size_t> pin_count_;
 
   /** @brief The dirty flag. */
-  bool is_dirty_;
+  std::atomic<bool> is_dirty_;
+  page_id_t page_id_{INVALID_PAGE_ID};
 
   /**
    * @brief A pointer to the data of the page that this frame holds.
@@ -92,8 +93,8 @@ class FrameHeader {
    * TODO(P1): You may add any fields or helper functions under here that you think are necessary.
    *
    * One potential optimization you could make is storing an optional page ID of the page that the `FrameHeader` is
-   * currently storing. This might allow you to skip searching for the corresponding (page ID, frame ID) pair somewhere
-   * else in the buffer pool manager...
+   * currently storing. This might allow you to skip searching for the corresponding (page ID, frame ID) pair
+   * somewhere else in the buffer pool manager...
    */
 };
 
@@ -171,5 +172,7 @@ class BufferPoolManager {
    * stored inside of it. Additionally, you may also want to implement a helper function that returns either a shared
    * pointer to a `FrameHeader` that already has a page's data stored inside of it, or an index to said `FrameHeader`.
    */
+  auto PinPage(page_id_t page_id, AccessType access_type) -> std::shared_ptr<FrameHeader>;
+  void FlushFrame(const std::shared_ptr<FrameHeader> &frame);
 };
 }  // namespace bustub

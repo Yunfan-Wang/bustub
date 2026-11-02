@@ -15,10 +15,15 @@
  * For range scan of b+ tree
  */
 #pragma once
+#include <deque>
+#include <memory>
+#include <optional>
 #include <utility>
 #include "buffer/traced_buffer_pool_manager.h"
 #include "common/config.h"
 #include "common/macros.h"
+#include "storage/page/b_plus_tree_header_page.h"
+#include "storage/page/b_plus_tree_internal_page.h"
 #include "storage/page/b_plus_tree_leaf_page.h"
 
 namespace bustub {
@@ -31,6 +36,12 @@ class IndexIterator {
  public:
   // you may define your own constructor based on your member variables
   IndexIterator();
+  IndexIterator(std::shared_ptr<TracedBufferPoolManager> bpm, ReadPageGuard guard, int index, page_id_t header_page_id,
+                const KeyComparator &comparator, const KeyType *start_key = nullptr);
+  IndexIterator(const IndexIterator &) = delete;
+  auto operator=(const IndexIterator &) -> IndexIterator & = delete;
+  IndexIterator(IndexIterator &&) noexcept = default;
+  auto operator=(IndexIterator &&) noexcept -> IndexIterator & = default;
   ~IndexIterator();  // NOLINT
 
   auto IsEnd() -> bool;
@@ -39,12 +50,21 @@ class IndexIterator {
 
   auto operator++() -> IndexIterator &;
 
-  auto operator==(const IndexIterator &itr) const -> bool { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+  auto operator==(const IndexIterator &itr) const -> bool { return page_id_ == itr.page_id_ && index_ == itr.index_; }
 
-  auto operator!=(const IndexIterator &itr) const -> bool { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+  auto operator!=(const IndexIterator &itr) const -> bool { return !(*this == itr); }
 
  private:
-  // add your own private member variables here
+  using LeafPage = BPlusTreeLeafPage<KeyType, ValueType, KeyComparator, NumTombs>;
+  void SkipDeleted();
+  void SeekAfter(const KeyType &key);
+  std::shared_ptr<TracedBufferPoolManager> bpm_;
+  ReadPageGuard guard_;
+  page_id_t page_id_{INVALID_PAGE_ID};
+  int index_{0};
+  page_id_t header_page_id_{INVALID_PAGE_ID};
+  std::optional<KeyComparator> comparator_;
+  std::optional<KeyType> lower_bound_;
 };
 
 }  // namespace bustub

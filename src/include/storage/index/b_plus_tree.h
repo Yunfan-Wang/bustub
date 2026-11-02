@@ -122,6 +122,10 @@ class BPlusTree {
   std::shared_ptr<TracedBufferPoolManager> bpm_;
 
  private:
+  auto LockLeaf(const KeyType &key, bool *is_root) -> std::optional<WritePageGuard>;
+  void LockPath(const KeyType &key, bool insert, Context *ctx);
+  void ReleasePath(Context *ctx);
+  auto ScanStart(const KeyType *key) -> INDEXITERATOR_TYPE;
   void ToGraph(page_id_t page_id, const BPlusTreePage *page, std::ofstream &out);
 
   void PrintTree(page_id_t page_id, const BPlusTreePage *page);

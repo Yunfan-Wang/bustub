@@ -73,6 +73,100 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   auto GetNextPageId() const -> page_id_t;
   void SetNextPageId(page_id_t next_page_id);
   auto KeyAt(int index) const -> KeyType;
+  auto KeyRefAt(int index) const -> const KeyType & { return key_array_[index]; }
+  auto ValueAt(int index) const -> const ValueType & { return rid_array_[index]; }
+  auto IsTombstone(int index) const -> bool {
+    for (size_t i = 0; i < num_tombstones_; i++) {
+      if (tombstones_[i] == static_cast<size_t>(index)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  auto LowerBound(const KeyType &key, const KeyComparator &comparator) const -> int {
+    int low = 0;
+    int high = GetSize();
+    while (low < high) {
+      int mid = low + (high - low) / 2;
+      if (comparator(key_array_[mid], key) < 0) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    return low;
+  }
+  void InsertAt(int index, const KeyType &key, const ValueType &value) {
+    for (int i = GetSize(); i > index; i--) {
+      key_array_[i] = key_array_[i - 1];
+      rid_array_[i] = rid_array_[i - 1];
+    }
+    for (size_t i = 0; i < num_tombstones_; i++) {
+      if (tombstones_[i] >= static_cast<size_t>(index)) {
+        tombstones_[i]++;
+      }
+    }
+    key_array_[index] = key;
+    rid_array_[index] = value;
+    ChangeSizeBy(1);
+  }
+  void Revive(int index, const ValueType &value) {
+    size_t count = 0;
+    for (size_t i = 0; i < num_tombstones_; i++) {
+      if (tombstones_[i] != static_cast<size_t>(index)) {
+        tombstones_[count++] = tombstones_[i];
+      }
+    }
+    num_tombstones_ = count;
+    rid_array_[index] = value;
+  }
+  void EraseAt(int index) {
+    size_t count = 0;
+    for (size_t i = 0; i < num_tombstones_; i++) {
+      auto position = tombstones_[i];
+      if (position != static_cast<size_t>(index)) {
+        tombstones_[count++] = position - (position > static_cast<size_t>(index) ? 1 : 0);
+      }
+    }
+    num_tombstones_ = count;
+    for (int i = index; i + 1 < GetSize(); i++) {
+      key_array_[i] = key_array_[i + 1];
+      rid_array_[i] = rid_array_[i + 1];
+    }
+    ChangeSizeBy(-1);
+  }
+  void DeleteAt(int index) {
+    if constexpr (LEAF_PAGE_TOMB_CNT == 0) {
+      EraseAt(index);
+    } else {
+      if (num_tombstones_ == LEAF_PAGE_TOMB_CNT) {
+        int oldest = static_cast<int>(tombstones_[0]);
+        EraseAt(oldest);
+        if (oldest < index) {
+          index--;
+        }
+      }
+      tombstones_[num_tombstones_++] = index;
+    }
+  }
+  void MoveTo(BPlusTreeLeafPage *recipient, int start, int count, const KeyComparator &comparator) {
+    std::vector<KeyType> moved_tombs;
+    for (size_t i = 0; i < num_tombstones_; i++) {
+      if (tombstones_[i] >= static_cast<size_t>(start) &&
+          tombstones_[i] < (static_cast<size_t>(start) + static_cast<size_t>(count))) {
+        moved_tombs.push_back(key_array_[tombstones_[i]]);
+      }
+    }
+    for (int i = start; i < start + count; i++) {
+      recipient->InsertAt(recipient->LowerBound(key_array_[i], comparator), key_array_[i], rid_array_[i]);
+    }
+    for (int i = start + count - 1; i >= start; i--) {
+      EraseAt(i);
+    }
+    for (const auto &key : moved_tombs) {
+      recipient->DeleteAt(recipient->LowerBound(key, comparator));
+    }
+  }
 
   /**
    * @brief for test only return a string representing all keys in
@@ -117,7 +211,7 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   // Array members for page data.
   KeyType key_array_[LEAF_PAGE_SLOT_CNT];
   ValueType rid_array_[LEAF_PAGE_SLOT_CNT];
-  // Feel free to add more fields and helper functions below if needed
+  // (Spring 2025) Feel free to add more fields and helper functions below if needed
 };
 
 }  // namespace bustub
