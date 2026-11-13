@@ -247,3 +247,10 @@ docs/dev
 
 # LLM Stuff
 .aider*
+
+# Local build directories and Gradle caches
+/build-*/
+.gradle/
+
+/test.bustub
+/test.log

@@ -15,6 +15,9 @@
 
 #include "execution/executors/delete_executor.h"
 
+#include <utility>
+#include "type/value_factory.h"
+
 namespace bustub {
 
 /**
@@ -25,12 +28,14 @@ namespace bustub {
  */
 DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {
-  UNIMPLEMENTED("TODO(P3): Add implementation.");
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {
 }
 
 /** Initialize the delete */
-void DeleteExecutor::Init() { UNIMPLEMENTED("TODO(P3): Add implementation."); }
+void DeleteExecutor::Init() { 
+  child_executor_->Init();
+  finished_ = false;
+}
 
 /**
  * Yield the number of rows deleted from the table.
@@ -44,7 +49,43 @@ void DeleteExecutor::Init() { UNIMPLEMENTED("TODO(P3): Add implementation."); }
  */
 auto DeleteExecutor::Next(std::vector<bustub::Tuple> *tuple_batch, std::vector<bustub::RID> *rid_batch,
                           size_t batch_size) -> bool {
-  UNIMPLEMENTED("TODO(P3): Add implementation.");
+  tuple_batch->clear();
+  
+  rid_batch->clear();
+  if (finished_ || batch_size == 0) {
+    return false;
+  }
+
+  auto catalog = exec_ctx_->GetCatalog();
+  auto table = catalog->GetTable(plan_->GetTableOid());
+  auto indexes = catalog->GetTableIndexes(table->name_);
+  auto txn = exec_ctx_->GetTransaction();
+  
+  std::vector<Tuple> tuples;
+  std::vector<RID> rids;
+  int32_t affected = 0;
+
+  while (child_executor_->Next(&tuples, &rids, batch_size)) {
+    // this section to be tested for performance later.
+    for (const auto &rid : rids) {
+      auto [meta, tuple] = table->table_->GetTuple(rid);
+      if (meta.is_deleted_) {
+        continue;
+      }
+
+      table->table_->UpdateTupleMeta({meta.ts_, true}, rid);
+      for (const auto &index : indexes) {
+
+        auto k = tuple.KeyFromTuple(table->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+        index->index_->DeleteEntry(k, rid, txn);
+      }
+      affected++;
+    }
+  }
+
+  tuple_batch->emplace_back(std::vector<Value>{ValueFactory::GetIntegerValue(affected)}, &GetOutputSchema());
+  finished_ = true;
+  return true;
 }
 
 }  // namespace bustub
