@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "execution/executors/topn_executor.h"
+#include <algorithm>
+
 
 namespace bustub {
 
@@ -21,10 +23,42 @@ namespace bustub {
  */
 TopNExecutor::TopNExecutor(ExecutorContext *exec_ctx, const TopNPlanNode *plan,
                            std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
 /** Initialize the TopN */
-void TopNExecutor::Init() { throw NotImplementedException("TopNExecutor is not implemented"); }
+void TopNExecutor::Init() {
+  child_executor_->Init();
+  
+  top_entries_.clear();
+  
+  pos_ = 0;
+  if (plan_->GetN() == 0) {
+    return;
+  }
+  TupleComparator cmp(plan_->GetOrderBy());
+  std::vector<Tuple> tuples;
+  std::vector<RID> rids;
+  
+  while (child_executor_->Next(&tuples, &rids, 1)) {
+    for (auto &tuple : tuples) {
+      
+      auto key = GenerateSortKey(tuple, plan_->GetOrderBy(), GetOutputSchema());
+      SortEntry entry{std::move(key), std::move(tuple)};
+      
+      if (top_entries_.size() < plan_->GetN()) {
+        
+        top_entries_.push_back(std::move(entry));
+        std::push_heap(top_entries_.begin(), top_entries_.end(), cmp);
+      } else if (cmp(entry, top_entries_.front())) {
+        
+        std::pop_heap(top_entries_.begin(), top_entries_.end(), cmp);
+        top_entries_.back() = std::move(entry);
+        std::push_heap(top_entries_.begin(), top_entries_.end(), cmp);
+      }
+    }
+  }
+  std::sort_heap(top_entries_.begin(), top_entries_.end(), cmp);
+}
 
 /**
  * Yield the next tuple batch from the TopN.
@@ -35,7 +69,15 @@ void TopNExecutor::Init() { throw NotImplementedException("TopNExecutor is not i
  */
 auto TopNExecutor::Next(std::vector<bustub::Tuple> *tuple_batch, std::vector<bustub::RID> *rid_batch, size_t batch_size)
     -> bool {
-  return false;
+  tuple_batch->clear();
+  rid_batch->clear();
+  
+  while (pos_ < top_entries_.size() && tuple_batch->size() < batch_size) {
+    tuple_batch->push_back(top_entries_[pos_++].second);
+    rid_batch->emplace_back();
+  }
+  
+  return !tuple_batch->empty();
 }
 
 auto TopNExecutor::GetNumInHeap() -> size_t { throw NotImplementedException("TopNExecutor is not implemented"); };

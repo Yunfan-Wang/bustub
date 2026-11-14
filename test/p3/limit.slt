@@ -1,0 +1,15 @@
+statement ok
+create table t(id int);
+
+statement ok
+insert into t values (1), (2);
+
+query
+select id from t limit 0;
+----
+
+query
+select id from t limit 5;
+----
+1
+2

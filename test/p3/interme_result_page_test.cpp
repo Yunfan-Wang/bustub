@@ -7,15 +7,18 @@ namespace bustub {
 TEST(IntermediateResultPageLocalTest, full) {
   IntermediateResultPage page;
   page.Init();
+  
   Schema schema({Column("s", TypeId::VARCHAR, 256)});
   Tuple first({ValueFactory::GetVarcharValue("first")}, &schema);
   Tuple rest({ValueFactory::GetVarcharValue(std::string(200, 'x'))}, &schema);
+  
   ASSERT_TRUE(page.Append(first));
   while (page.Append(rest)) {
   }
   ASSERT_GT(page.Size(), 1);
   const auto count = page.Size();
   EXPECT_FALSE(page.Append(rest));
+  
   EXPECT_EQ(count, page.Size());
   EXPECT_EQ("first", page.GetTuple(0).GetValue(&schema, 0).ToString());
   EXPECT_EQ(std::string(200, 'x'), page.GetTuple(count - 1).GetValue(&schema, 0).ToString());

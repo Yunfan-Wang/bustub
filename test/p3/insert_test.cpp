@@ -34,7 +34,6 @@ TEST(InsertLocalTest, index3) {
     rows.push_back({std::make_shared<ConstantValueExpression>(ValueFactory::GetIntegerValue(id))});
   }
   
-  
   // don't need more tests.
   auto values = std::make_shared<ValuesPlanNode>(schema, rows);
   InsertPlanNode plan(count_schema, values, table->oid_);
@@ -45,6 +44,7 @@ TEST(InsertLocalTest, index3) {
   
   insert.Init();
   ASSERT_TRUE(insert.Next(&tuples, &rids, 2));
+  
   //value test v1
   ASSERT_EQ(1, tuples.size());
   EXPECT_EQ(3, tuples[0].GetValue(count_schema.get(), 0).GetAs<int32_t>());

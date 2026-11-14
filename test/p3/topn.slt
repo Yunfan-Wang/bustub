@@ -1,0 +1,11 @@
+statement ok
+create table t(id int, score int);
+
+statement ok
+insert into t values (1, 9), (2, null), (3, 9), (4, 8);
+
+query +ensure:topn
+select id from (select * from t order by score desc nulls last, id desc limit 2) s;
+----
+3
+1

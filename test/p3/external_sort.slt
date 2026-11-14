@@ -1,0 +1,23 @@
+statement ok
+create table t(id int, name varchar(16), n int);
+
+statement ok
+insert into t values (1, 'c', 1), (2, 'd', null), (3, 'a', 1), (4, 'b', 1);
+
+query
+select id from (select * from t order by n desc nulls first, name desc) s;
+----
+2
+1
+4
+3
+
+statement ok
+set force_optimizer_starter_rule=yes
+
+query
+select v1 from __mock_external_merge_sort_input where v1 < 1500 order by v1 desc limit 3;
+----
+1499
+1498
+1497
