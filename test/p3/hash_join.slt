@@ -1,0 +1,16 @@
+statement ok
+create table l(a int);
+
+statement ok
+create table r(b int);
+
+statement ok
+insert into l values (1), (2), (null);
+
+statement ok
+insert into r values (1), (1), (null);
+
+query +ensure:hash_join
+select count(*), count(b) from l left join r on a = b;
+----
+4 2

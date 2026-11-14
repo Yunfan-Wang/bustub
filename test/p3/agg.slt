@@ -1,0 +1,15 @@
+statement ok
+create table t(a int, b int);
+
+statement ok
+insert into t values (null, 2), (null, 3), (null, null);
+
+query
+select count(*), count(b), sum(b), min(b), max(b) from t group by a;
+----
+3 2 5 2 3
+
+query
+select count(*), sum(b) from t where b > 10;
+----
+0 integer_null

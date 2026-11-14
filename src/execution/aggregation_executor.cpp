@@ -25,12 +25,29 @@ namespace bustub {
  */
 AggregationExecutor::AggregationExecutor(ExecutorContext *exec_ctx, const AggregationPlanNode *plan,
                                          std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {
-  UNIMPLEMENTED("TODO(P3): Add implementation.");
+    : AbstractExecutor(exec_ctx),
+    plan_(plan),
+    child_executor_(std::move(child_executor)),
+    aht_(plan->GetAggregates(), plan->GetAggregateTypes()),
+    aht_iterator_(aht_.Begin()) {
 }
 
 /** Initialize the aggregation */
-void AggregationExecutor::Init() { UNIMPLEMENTED("TODO(P3): Add implementation."); }
+void AggregationExecutor::Init() {
+    child_executor_->Init();
+  aht_.Clear();
+  std::vector<Tuple> tuples;
+  std::vector<RID> rids;
+  while (child_executor_->Next(&tuples, &rids, BUSTUB_BATCH_SIZE)) {
+    for (const auto &tuple : tuples) {
+      aht_.InsertCombine(MakeAggregateKey(&tuple), MakeAggregateValue(&tuple));
+    }
+  }
+  if (plan_->GetGroupBys().empty() && aht_.Begin() == aht_.End()) {
+    aht_.InsertEmptyGroup();
+  }
+  aht_iterator_ = aht_.Begin();
+}
 
 /**
  * Yield the next tuple batch from the aggregation.
@@ -42,7 +59,19 @@ void AggregationExecutor::Init() { UNIMPLEMENTED("TODO(P3): Add implementation."
 
 auto AggregationExecutor::Next(std::vector<bustub::Tuple> *tuple_batch, std::vector<bustub::RID> *rid_batch,
                                size_t batch_size) -> bool {
-  UNIMPLEMENTED("TODO(P3): Add implementation.");
+  tuple_batch->clear();
+  rid_batch->clear();
+  auto &it = aht_iterator_;
+  const auto end = aht_.End();
+  while (it != end && tuple_batch->size() < batch_size) {
+    auto values = it.Key().group_bys_;
+    const auto &aggregates = it.Val().aggregates_;
+    values.insert(values.end(), aggregates.begin(), aggregates.end());
+    tuple_batch->emplace_back(values, &GetOutputSchema());
+    rid_batch->emplace_back();
+    ++it;
+  }
+  return !tuple_batch->empty();
 }
 
 /** Do not use or remove this function; otherwise, you will get zero points. */

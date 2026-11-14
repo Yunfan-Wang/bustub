@@ -19,6 +19,8 @@
 #include "execution/plans/seq_scan_plan.h"
 #include "storage/table/tuple.h"
 
+#include "storage/table/table_iterator.h"
+
 namespace bustub {
 
 /**

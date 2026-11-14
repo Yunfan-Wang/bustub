@@ -1,0 +1,20 @@
+statement ok
+create table t(a int, b int);
+
+statement ok
+create index ia on t(a);
+
+statement ok
+insert into t values (1, 10), (2, 20), (3, 30);
+
+query rowsort +ensure:index_scan
+select b from t where 3 = a or a = 1 or a = 1;
+----
+10
+30
+
+query rowsort +ensure:seq_scan
+select b from t where a = 1 or b = 20;
+----
+10
+20

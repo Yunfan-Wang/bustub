@@ -1,0 +1,24 @@
+statement ok
+set force_optimizer_starter_rule=yes
+
+statement ok
+create table l(a int);
+
+statement ok
+create table r(b int);
+
+statement ok
+create index ib on r(b);
+
+statement ok
+insert into l values (1), (2), (null);
+
+statement ok
+insert into r values (1);
+
+query rowsort +ensure:index_join
+select * from l left join r on l.a = r.b;
+----
+1 1
+2 integer_null
+integer_null integer_null
