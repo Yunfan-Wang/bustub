@@ -13,7 +13,7 @@
 #include "execution/executors/nested_index_join_executor.h"
 #include "common/macros.h"
 #include "common/exception.h"
-#include "execution/executors/join_tuple.h"
+#include "execution/execution_common.h"
 
 namespace bustub {
 

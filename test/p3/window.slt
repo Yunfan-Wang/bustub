@@ -1,0 +1,13 @@
+statement ok
+create table t(g int, n int);
+
+statement ok
+insert into t values (1, 2), (1, 2), (1, 5), (2, 3);
+
+query rowsort
+select g, n, rank() over (partition by g order by n), sum(n) over (partition by g order by n) from t;
+----
+1 2 1 4
+1 2 1 4
+1 5 3 9
+2 3 1 3

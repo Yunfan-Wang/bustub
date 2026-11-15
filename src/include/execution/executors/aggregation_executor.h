@@ -44,18 +44,19 @@ class SimpleAggregationHashTable {
   /** @return The initial aggregate value for this aggregation executor */
   auto GenerateInitialAggregateValue() -> AggregateValue {
     std::vector<Value> values{};
-    for (const auto &agg_type : agg_types_) {
-      switch (agg_type) {
+    for (size_t i = 0; i < agg_types_.size(); i++) {
+      switch (agg_types_[i]) {
         case AggregationType::CountStarAggregate:
           // Count start starts at zero.
           values.emplace_back(ValueFactory::GetIntegerValue(0));
           break;
         case AggregationType::CountAggregate:
+          values.emplace_back(ValueFactory::GetNullValueByType(TypeId::INTEGER));
+          break;
         case AggregationType::SumAggregate:
         case AggregationType::MinAggregate:
         case AggregationType::MaxAggregate:
-          // Others starts at null.
-          values.emplace_back(ValueFactory::GetNullValueByType(TypeId::INTEGER));
+          values.emplace_back(ValueFactory::GetNullValueByType(agg_exprs_[i]->GetReturnType().GetType()));
           break;
       }
     }

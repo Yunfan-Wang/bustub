@@ -14,7 +14,7 @@
 #include "common/macros.h"
 
 #include "common/exception.h"
-#include "execution/executors/join_tuple.h"
+#include "execution/execution_common.h"
 #include "storage/page/intermediate_result_page.h"
 
 namespace bustub {

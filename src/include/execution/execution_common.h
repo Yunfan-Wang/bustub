@@ -42,6 +42,9 @@ class TupleComparator {
 
 auto GenerateSortKey(const Tuple &tuple, const std::vector<OrderBy> &order_bys, const Schema &schema) -> SortKey;
 
+auto JoinTuple(const Tuple &left, const Schema &left_schema, const Tuple *right, const Schema &right_schema,
+                      const Schema &output_schema) -> Tuple;
+
 /**
  * Above are all you need for P3.
  * You can ignore the remaining part of this file until P4.

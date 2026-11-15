@@ -14,7 +14,7 @@
 #include "binder/table_ref/bound_join_ref.h"
 #include "common/exception.h"
 #include "common/macros.h"
-#include "execution/executors/join_tuple.h"
+#include "execution/execution_common.h"
 
 namespace bustub {
 

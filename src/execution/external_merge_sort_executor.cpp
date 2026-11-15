@@ -61,7 +61,7 @@ auto MergeSortRun::Iterator::operator*() -> Tuple {
 template <size_t K>
 ExternalMergeSortExecutor<K>::ExternalMergeSortExecutor(ExecutorContext *exec_ctx, const SortPlanNode *plan,
                                                         std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx), , plan_(plan), cmp_(plan->GetOrderBy()), child_executor_(std::move(child_executor)) {
+    : AbstractExecutor(exec_ctx), plan_(plan), cmp_(plan->GetOrderBy()), child_executor_(std::move(child_executor)) {
 }
 
 /** Initialize the external merge sort */
